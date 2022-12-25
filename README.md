@@ -1,5 +1,9 @@
 ## CRUD with NextJS(Typescript) + MongoDB
 
+<img src="./image/1.png" width="300" >
+
+<img src="./image/2.png" width="300" >
+
 ## How to use
 Clone git repo this:
 ```bash
