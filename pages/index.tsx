@@ -1,33 +1,51 @@
-import Head from 'next/head'
-import clientPromise from '../lib/mongodb'
-import { InferGetServerSidePropsType } from 'next'
+import Head from "next/head";
+import Layout from "../components/Layout";
+import { useState } from "react";
 
-export async function getServerSideProps(context) {
+type Props = {
+  posts: [Post];
+};
+
+type Post = {
+  _id: String;
+  title: String;
+  content: String;
+};
+
+export async function getServerSideProps() {
   try {
-    await clientPromise
-    // `await clientPromise` will use the default database passed in the MONGODB_URI
-    // However you can use another database (e.g. myDatabase) by replacing the `await clientPromise` with the following code:
-    //
-    // `const client = await clientPromise`
-    // `const db = client.db("myDatabase")`
-    //
-    // Then you can execute queries against your database like so:
-    // db.find({}) or any of the MongoDB Node Driver commands
+    let response = await fetch("http://localhost:3000/api/getposts");
+    let posts = await response.json();
 
     return {
-      props: { isConnected: true },
-    }
-  } catch (e) {
-    console.error(e)
-    return {
-      props: { isConnected: false },
-    }
+      props: {
+        posts: JSON.parse(JSON.stringify(posts)),
+      },
+    };
+  } catch (error) {
+    console.error(error);
   }
 }
 
-export default function Home({
-  isConnected,
-}: InferGetServerSidePropsType<typeof getServerSideProps>) {
+export default function Home(props: Props) {
+  const [posts, setPosts] = useState<[Post]>(props.posts);
+
+  const handleDeletePost = async (postId: String) => {
+    try {
+      let response = await fetch("http://localhost:3000/api/deletepost?id=" + postId,{
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/plain, */*"
+        }
+      })
+
+      response = await response.json();
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+    }
+  }
   return (
     <div className="container">
       <Head>
@@ -35,56 +53,31 @@ export default function Home({
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main>
-        <h1 className="title">
-          Welcome to <a href="https://nextjs.org">Next.js with MongoDB!</a>
-        </h1>
-
-        {isConnected ? (
-          <h2 className="subtitle">You are connected to MongoDB</h2>
-        ) : (
-          <h2 className="subtitle">
-            You are NOT connected to MongoDB. Check the <code>README.md</code>{' '}
-            for instructions.
-          </h2>
-        )}
-
-        <p className="description">
-          Get started by editing <code>pages/index.js</code>
-        </p>
-
-        <div className="grid">
-          <a href="https://nextjs.org/docs" className="card">
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className="card">
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className="card"
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card"
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+      <Layout>
+        <div className="posts-body">
+          <h1 className="posts-body-heading">Top 20 Posts</h1>
+          {posts?.length > 0 ? (
+            <ul className="posts-list">
+              {posts.map((post, index) => {
+                return (
+                  <li className="post-item" key={index}>
+                    <div className="post-item-details">
+                      <h2>{post.title}</h2>
+                      <p>{post.content}</p>
+                    </div>
+                    <div className="post-item-actions">
+                      <a href={`/posts/${post._id}`}>Edit</a>
+                      <button onClick={() => handleDeletePost(post._id as string)}>Delete</button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <h2 className="posts-body-heading">No posts found</h2>
+          )}
         </div>
-      </main>
+      </Layout>
 
       <footer>
         <a
@@ -92,30 +85,41 @@ export default function Home({
           target="_blank"
           rel="noopener noreferrer"
         >
-          Powered by{' '}
+          Powered by{" "}
           <img src="/vercel.svg" alt="Vercel Logo" className="logo" />
         </a>
       </footer>
 
       <style jsx>{`
-        .container {
-          min-height: 100vh;
-          padding: 0 0.5rem;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
 
-        main {
-          padding: 5rem 0;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
+            .posts-body {
+                width: 400px;
+                margin: 10px auto;
+            }
 
+            .posts-body-heading {
+              font-family: sans-;
+            }
+
+            .posts-list {
+                list-style: none;
+                display: block;
+            }
+
+            .post-item {
+              width: 100%;
+              padding: 10px;
+              border: 1px solid #d5d5d5;
+            }
+
+            .post-item-actions {
+              display: flex;
+              justify-content: space-between;
+            }
+
+            .post-item-actions a {
+              text-decoration: none;
+            }
         footer {
           width: 100%;
           height: 100px;
@@ -247,5 +251,5 @@ export default function Home({
         }
       `}</style>
     </div>
-  )
+  );
 }
